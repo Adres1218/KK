@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>⚡ EFSANE POS SİSTEMİ v5.0</title>
+
+  <!-- Kütüphaneler -->
+  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: #333;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 15px;
+    }
+
+    header {
+      text-align: center;
+      padding: 20px;
+      color: white;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+
+    header h1 {
+      font-size: 28px;
+      margin-bottom: 5px;
+    }
+
+    header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+      font-size: 16px;
+      transition: 0.3s;
+    }
+
+    .tab.active {
+      background: white;
+      color: #1e3c72;
+      font-weight: 600;
+    }
+
+    .tab-content {
+      display: none;
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    input, button, select {
+      padding: 12px;
+      margin: 8px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    input:focus, select:focus {
+      outline: 2px solid #1e3c72;
+      border-color: #1e3c72;
+    }
+
+    button {
+      background: #1e3c72;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #152a56;
+      transform: translateY(-2px);
+    }
+
+    button.full {
+      width: 100%;
+      font-size: 18px;
+      padding: 15px;
+    }
+
+    .btn-red { background: #e74c3c; }
+    .btn-green { background: #2ecc71; }
+    .btn-blue { background: #3498db; }
+    .btn-purple { background: #9b59b6; }
+    .btn-orange { background: #e67e22; }
+    .btn-teal { background: #1abc9c; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 15px;
+    }
+
+    th {
+      background: #1e3c72;
+      color: white;
+      padding: 12px;
+      text-align: center;
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+    }
+
+    tr:hover {
+      background: #f8f9ff;
+    }
+
+    .flex {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .scanner-container {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      margin: 20px auto;
+      border: 3px solid #1e3c72;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+
+    #interactive.viewport {
+      width: 100%;
+      height: 300px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #interactive.viewport video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .status {
+      text-align: center;
+      margin: 15px 0;
+      font-weight: bold;
+      color: #e74c3c;
+    }
+
+    .barcode-img {
+      width: 180px;
+      height: 50px;
+    }
+
+    .delete-btn {
+      background: #e74c3c;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+
+    .print-btn {
+      background: #9b59b6;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .stat-card {
+      flex: 1;
+      min-width: 200px;
+      background: #f8f9ff;
+      padding: 15px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .stat-card h3 {
+      color: #1e3c72;
+      margin-bottom: 5px;
+      font-size: 18px;
+    }
+
+    .stat-card p {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .payment-section {
+      background: #f0f2f5;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+    }
+
+    .payment-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: white;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .user-info {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      background: rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 24px;
+      }
+      .tab {
+        font-size: 14px;
+        padding: 10px 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- GİRİŞ EKRANI -->
+  <div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, #1e3c72, #2a5298); display:flex; justify-content:center; align-items:center; z-index:1000;">
+    <div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+      <h2 style="color:#1e3c72;">🔐 Giriş Yap</h2>
+      <input type="text" id="username" placeholder="Kullanıcı Adı" style="width:100%; margin:10px 0;" />
+      <input type="password" id="password" placeholder="Şifre" style="width:100%; margin:10px 0;" />
+      <button onclick="girisYap()" style="width:100%; padding:12px; background:#1e3c72; color:white; border:none; border-radius:8px; font-size:16px;">Giriş</button>
+      <p style="margin-top:15px; font-size:14px;">Hesabınız yok mu? <a href="#" onclick="kayitFormuGoster()" style="color:#1e3c72; text-decoration:none; font-weight:bold;">Kayıt Ol</a></p>
+    </div>
+  </div>
+
+  <!-- KAYIT EKRANI -->
+  <div id="register-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, #1e3c72, #2a5298); display:none; justify-content:center; align-items:center; z-index:1000;">
+    <div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+      <h2 style="color:#1e3c72;">📝 Kayıt Ol</h2>
+      <input type="text" id="register-name" placeholder="Ad Soyad" style="width:100%; margin:10px 0;" />
+      <input type="text" id="register-username" placeholder="Kullanıcı Adı" style="width:100%; margin:10px 0;" />
+      <input type="password" id="register-password" placeholder="Şifre" style="width:100%; margin:10px 0;" />
+      <input type="password" id="register-password-confirm" placeholder="Şifre Tekrar" style="width:100%; margin:10px 0;" />
+      <input type="text" id="register-special" placeholder="Özel Bilgi (İsteğe Bağlı)" style="width:100%; margin:10px 0;" />
+      <button onclick="kayitOl()" style="width:100%; padding:12px; background:#1e3c72; color:white; border:none; border-radius:8px; font-size:16px;">Kayıt Ol</button>
+      <p style="margin-top:15px; font-size:14px;">Zaten hesabınız var mı? <a href="#" onclick="girisFormuGoster()" style="color:#1e3c72; text-decoration:none; font-weight:bold;">Giriş Yap</a></p>
+    </div>
+  </div>
+
+  <audio class="sound" id="success-sound" src="https://www.soundjay.com/buttons/sounds/button-1.mp3"></audio>
+  <audio class="sound" id="error-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+
+  <div class="container">
+    <div class="user-info" id="user-info">Giriş yapmadı</div>
+
+    <header>
+      <h1>⚡ EFSANE POS SİSTEMİ v5.0</h1>
+      <p>Profesyonel, çoklu kullanıcı, kasa devir, bulut yedekleme</p>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="satis">🛒 Satış Yap</button>
+      <button class="tab" data-tab="urun-ekle">➕ Ürün Ekle</button>
+      <button class="tab" data-tab="urunler">📦 Ürün Listesi</button>
+      <button class="tab" data-tab="toptanci">🏢 Toptancılar</button>
+      <button class="tab" data-tab="rapor">📊 Raporlar</button>
+      <button class="tab" data-tab="kasa">💰 Kasa Devir</button>
+    </div>
+
+    <!-- SATIŞ YAP -->
+    <div class="tab-content active" id="satis">
+      <h2 style="text-align:center;">🛒 Satış Yap</h2>
+
+      <div class="scanner-container">
+        <div id="interactive" class="viewport"></div>
+      </div>
+
+      <p class="status" id="scanner-status">Kamera başlatılmadı</p>
+
+      <div class="flex" style="justify-content:center;">
+        <input type="text" id="satis-barkod" placeholder="Barkod girin" oninput="elleTara(this.value)" />
+        <button onclick="baslatTarama()">📹 Kamerayı Aç</button>
+      </div>
+
+      <p id="satis-sonuc" style="text-align:center; margin:15px 0; font-weight:bold;"></p>
+
+      <h3>Sepet</h3>
+      <table id="sepet-tablo">
+        <tr><th>Ürün</th><th>Fiyat</th><th>Adet</th><th>Toplam</th></tr>
+      </table>
+      <p style="text-align:right; font-size:18px;"><strong>Genel Toplam: </strong> <span id="genel-toplam">0.00 ₺</span></p>
+
+      <div class="payment-section">
+        <h3>💳 Ödeme Yöntemi</h3>
+        <div class="payment-row">
+          <input type="number" id="nakit-tutar" placeholder="Nakit" step="0.01" />
+          <input type="number" id="kart-tutar" placeholder="Kart" step="0.01" />
+        </div>
+        <p><strong>Para Üstü: </strong> <span id="para-ustu">0.00 ₺</span></p>
+      </div>
+
+      <button onclick="satisiOnayla()" class="full btn-green">✅ Satışı Tamamla</button>
+    </div>
+
+    <!-- ÜRÜN EKLEME -->
+    <div class="tab-content" id="urun-ekle">
+      <h2 style="text-align:center; margin-bottom:20px;">➕ Yeni Ürün Ekle</h2>
+      <div class="flex" style="justify-content:center; flex-direction:column;">
+        <input type="text" id="urun-adi" placeholder="Ürün Adı" />
+        <input type="number" id="urun-fiyat" placeholder="Fiyat (₺)" step="0.01" />
+        <input type="number" id="urun-stok" placeholder="Stok Adedi" />
+        <input type="text" id="urun-barkod" placeholder="Barkod (otomatik üretir)" />
+        <button onclick="urunEkle()" class="full btn-blue">➕ Ürünü Ekle</button>
+      </div>
+    </div>
+
+    <!-- ÜRÜN LİSTESİ -->
+    <div class="tab-content" id="urunler">
+      <h2>📦 Tüm Ürünler</h2>
+      <button onclick="dışaAktarExcel()" class="btn-green">📤 Excel'e Aktar</button>
+      <table id="urun-tablo">
+        <tr><th>Barkod</th><th>Ürün Adı</th><th>Fiyat</th><th>Stok</th><th>Barkod</th><th>İşlem</th></tr>
+      </table>
+    </div>
+
+    <!-- TOPTANCI -->
+    <div class="tab-content" id="toptanci">
+      <h2>🏢 Toptancılar</h2>
+      <div class="flex" style="justify-content:center; flex-direction:column;">
+        <input type="text" id="toptanci-ad" placeholder="Toptancı Adı" />
+        <input type="text" id="toptanci-telefon" placeholder="Telefon" />
+        <input type="number" id="toptanci-borc" placeholder="Borç (₺)" step="0.01" />
+        <button onclick="toptanciEkle()" class="full btn-orange">➕ Toptancı Ekle</button>
+      </div>
+      <table id="toptanci-tablo">
+        <tr><th>Ad</th><th>Telefon</th><th>Borç</th><th>İşlem</th></tr>
+      </table>
+    </div>
+
+    <!-- RAPOR -->
+    <div class="tab-content" id="rapor">
+      <h2>📊 Satış Raporu</h2>
+      <div class="stats">
+        <div class="stat-card">
+          <h3>Toplam Satış</h3>
+          <p id="toplam-satis">0</p>
+        </div>
+        <div class="stat-card">
+          <h3>Toplam Ciro</h3>
+          <p id="toplam-ciro">0.00 ₺</p>
+        </div>
+        <div class="stat-card">
+          <h3>Ürün Sayısı</h3>
+          <p id="urun-sayisi">0</p>
+        </div>
+        <div class="stat-card">
+          <h3>Toptancı Borcu</h3>
+          <p id="toplam-borc">0.00 ₺</p>
+        </div>
+      </div>
+      <table id="rapor-tablo">
+        <tr><th>Tarih</th><th>Kasa</th><th>Ödeme</th><th>Tutar</th></tr>
+      </table>
+    </div>
+
+    <!-- KASA DEVİR -->
+    <div class="tab-content" id="kasa">
+      <h2>💰 Günlük Kasa Devir</h2>
+      <button onclick="kasaKapanisi()" class="full btn-teal">📅 Kasa Kapanışı Yap</button>
+      <button onclick="yedekAl()" class="full btn-purple">☁️ Yedekle (Google Drive)</button>
+      <div id="kasa-sonuc" style="margin-top:20px; padding:15px; background:#f0f0f0; border-radius:10px; display:none;"></div>
+    </div>
+  </div>
+
+  <footer>
+    Efsane POS Sistemi v5.0 © 2025 | Her hakkı saklıdır
+  </footer>
+
+  <script>
+    // KULLANICILAR
+    const users = [  
+      { username: "admin", password: "1234", role: "admin", name: "Yönetici" },
+      { username: "kasa1", password: "1234", role: "user", name: "Kasa 1" },
+      { username: "kasa2", password: "1234", role: "user", name: "Kasa 2" }
+    ];
+
+    // Kayıtlı kullanıcıları localStorage'dan yükle
+    let kayitliKullanicilar = JSON.parse(localStorage.getItem("pos_kullanicilar_v5")) || [];
+    // Kayıtlı kullanıcıları users dizisine ekle
+    kayitliKullanicilar.forEach(kullanici => {
+      if (!users.some(u => u.username === kullanici.username)) {
+        users.push(kullanici);
+      }
+    });
+    
+    // Kayıt formunu göster
+    function kayitFormuGoster() {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("register-screen").style.display = "flex";
+    }
+    
+    // Giriş formunu göster
+    function girisFormuGoster() {
+      document.getElementById("register-screen").style.display = "none";
+      document.getElementById("login-screen").style.display = "flex";
+    }
+    
+    // Kayıt ol
+    function kayitOl() {
+      const name = document.getElementById("register-name").value.trim();
+      const username = document.getElementById("register-username").value.trim();
+      const password = document.getElementById("register-password").value;
+      const passwordConfirm = document.getElementById("register-password-confirm").value;
+      const special = document.getElementById("register-special").value.trim();
+      
+      // Validasyon
+      if (!name || !username || !password) {
+        alert("Lütfen gerekli alanları doldurun!");
+        return;
+      }
+      
+      if (password !== passwordConfirm) {
+        alert("Şifreler eşleşmiyor!");
+        return;
+      }
+      
+      if (users.some(u => u.username === username)) {
+        alert("Bu kullanıcı adı zaten kullanılıyor!");
+        return;
+      }
+      
+      // Yeni kullanıcı oluştur
+      const newUser = {
+        username,
+        password,
+        role: "user",
+        name,
+        special,
+        registerDate: new Date().toLocaleString()
+      };
+      
+      // Kullanıcıyı kaydet
+      users.push(newUser);
+      kayitliKullanicilar.push(newUser);
+      localStorage.setItem("pos_kullanicilar_v5", JSON.stringify(kayitliKullanicilar));
+      
+      alert("✅ Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
+      girisFormuGoster();
+      playSound("success");
+    }
+
+    let currentUser = null;
+    let urunler = JSON.parse(localStorage.getItem("pos_urunler_v5")) || [];
+    let satislar = JSON.parse(localStorage.getItem("pos_satislar_v5")) || [];
+    let toptancilar = JSON.parse(localStorage.getItem("pos_toptancilar_v5")) || [];
+    let sepet = [];
+    let taramaAktif = false;
+
+    // GİRİŞ YAP
+    function girisYap() {
+      const u = document.getElementById("username").value;
+      const p = document.getElementById("password").value;
+      const user = users.find(x => x.username === u && x.password === p);
+      
+      if (user) {
+        currentUser = user;
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("user-info").textContent = `Kullanıcı: ${user.name}`;
+        tabloyuDoldur();
+        toptanciTablosuDoldur();
+        raporuGuncelle();
+      } else {
+        alert("Hatalı kullanıcı adı veya şifre!");
+      }
+    }
+
+    // Sekmeler
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        if (!currentUser) {
+          alert("Lütfen önce giriş yapın!");
+          return;
+        }
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(tab.dataset.tab).classList.add("active");
+        if (tab.dataset.tab === "satis" && !taramaAktif) {
+          baslatTarama();
+        }
+      });
+    });
+
+    // Elle tara
+    function elleTara(barkod) {
+      if (barkod.length >= 8) {
+        const urun = urunler.find(u => u.barkod === barkod);
+        if (urun) {
+          document.getElementById("satis-barkod").value = "";
+          satisYap(urun);
+          playSound("success");
+        }
+      }
+    }
+
+    // Ürün Ekle
+    function urunEkle() {
+      if (!currentUser) return;
+      const ad = document.getElementById("urun-adi").value.trim();
+      const fiyat = parseFloat(document.getElementById("urun-fiyat").value);
+      const stok = parseInt(document.getElementById("urun-stok").value);
+      let barkod = document.getElementById("urun-barkod").value.trim();
+
+      if (!ad || !fiyat || !stok) {
+        alert("Lütfen tüm alanları doldurun!");
+        return;
+      }
+
+      if (!barkod) {
+        barkod = "POS" + String(Math.floor(100000 + Math.random() * 900000));
+      }
+
+      if (urunler.some(u => u.barkod === barkod)) {
+        alert("Bu barkod zaten var!");
+        return;
+      }
+
+      urunler.push({ barkod, ad, fiyat, stok });
+      localStorage.setItem("pos_urunler_v5", JSON.stringify(urunler));
+      tabloyuDoldur();
+      playSound("success");
+
+      document.getElementById("urun-adi").value = "";
+      document.getElementById("urun-fiyat").value = "";
+      document.getElementById("urun-stok").value = "";
+      document.getElementById("urun-barkod").value = "";
+      alert("✅ Ürün eklendi!");
+    }
+
+    // Tabloyu doldur
+    function tabloyuDoldur() {
+      const tbody = document.getElementById("urun-tablo");
+      tbody.innerHTML = "<tr><th>Barkod</th><th>Ürün Adı</th><th>Fiyat</th><th>Stok</th><th>Barkod</th><th>İşlem</th></tr>";
+      urunler.forEach((u, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${u.barkod}</td>
+          <td>${u.ad}</td>
+          <td>${u.fiyat.toFixed(2)} ₺</td>
+          <td>${u.stok}</td>
+          <td><svg class="barcode-img" jsbarcode-value="${u.barkod}"></svg></td>
+          <td>
+            <button class="delete-btn" onclick="urunSil(${i})">Sil</button>
+            <button class="print-btn" onclick="barkodBas('${u.barkod}')">Yazdır</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      JsBarcode(".barcode-img");
+    }
+
+    // Ürün Sil
+    function urunSil(index) {
+      if (confirm("Bu ürünü silmek istiyor musunuz?")) {
+        urunler.splice(index, 1);
+        localStorage.setItem("pos_urunler_v5", JSON.stringify(urunler));
+        tabloyuDoldur();
+        playSound("error");
+      }
+    }
+
+    // Barkod bas
+    function barkodBas(barkod) {
+      const doc = new jspdf.jsPDF();
+      doc.setFontSize(12);
+      doc.text(barkod, 20, 20);
+      const canvas = JsBarcode(".barcode-img", barkod).toCanvas();
+      doc.addImage(canvas.toDataURL("image/png"), "PNG", 20, 25, 80, 30);
+      doc.save(`barkod_${barkod}.pdf`);
+      playSound("success");
+    }
+
+    // Kamera ile tarama başlat
+    function baslatTarama() {
+      if (taramaAktif || !currentUser) return;
+      taramaAktif = true;
+      document.getElementById("scanner-status").innerText = "Tarama başladı...";
+
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: document.querySelector("#interactive"),
+          constraints: {
+            width: 640,
+            height: 480,
+            facingMode: "environment"
+          }
+        },
+        decoder: {
+          readers: [
+            "code_128_reader",
+            "ean_reader",
+            "upc_reader",
+            "qr_code_reader"
+          ]
+        },
+        locate: true
+      }, function(err) {
+        if (err) {
+          document.getElementById("scanner-status").innerText = "Kamera hatası: " + err;
+          return;
+        }
+        Quagga.start();
+      });
+
+      Quagga.onDetected((data) => {
+        const code = data.codeResult.code;
+        document.getElementById("satis-barkod").value = code;
+        const urun = urunler.find(u => u.barkod === code);
+        if (urun) {
+          satisYap(urun);
+          playSound("success");
+        } else {
+          document.getElementById("satis-sonuc").innerHTML = `<span style="color:red">❌ Ürün bulunamadı!</span>`;
+          playSound("error");
+        }
+      });
+    }
+
+    // Satış yap
+    function satisYap(urun) {
+      if (urun.stok <= 0) {
+        document.getElementById("satis-sonuc").innerHTML = "❌ Stokta yok!";
+        playSound("error");
+        return;
+      }
+
+      const item = sepet.find(s => s.barkod === urun.barkod);
+      if (item) {
+        item.adet++;
+      } else {
+        sepet.push({ barkod: urun.barkod, ad: urun.ad, fiyat: urun.fiyat, adet: 1 });
+      }
+
+      urun.stok--;
+      document.getElementById("satis-sonuc").innerHTML = `✅ ${urun.ad} sepete eklendi!`;
+      sepetGoster();
+    }
+
+    // Sepeti göster
+    function sepetGoster() {
+      const tbody = document.getElementById("sepet-tablo");
+      tbody.innerHTML = "<tr><th>Ürün</th><th>Fiyat</th><th>Adet</th><th>Toplam</th></tr>";
+      let toplam = 0;
+      sepet.forEach(item => {
+        const tutar = item.fiyat * item.adet;
+        toplam += tutar;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${item.ad}</td><td>${item.fiyat} ₺</td><td>${item.adet}</td><td>${tutar.toFixed(2)} ₺</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("genel-toplam").textContent = toplam.toFixed(2) + " ₺";
+      hesaplaParaUstu();
+    }
+
+    // Para üstü hesapla
+    function hesaplaParaUstu() {
+      const nakit = parseFloat(document.getElementById("nakit-tutar").value) || 0;
+      const kart = parseFloat(document.getElementById("kart-tutar").value) || 0;
+      const toplam = parseFloat(document.getElementById("genel-toplam").textContent);
+      const paraUstu = (nakit + kart) - toplam;
+      document.getElementById("para-ustu").textContent = paraUstu >= 0 ? paraUstu.toFixed(2) + " ₺" : "0.00 ₺";
+    }
+
+    document.getElementById("nakit-tutar").addEventListener("input", hesaplaParaUstu);
+    document.getElementById("kart-tutar").addEventListener("input", hesaplaParaUstu);
+
+    // Satışı tamamla
+    function satisiOnayla() {
+      if (sepet.length === 0) {
+        alert("Sepet boş!");
+        return;
+      }
+
+      const nakit = parseFloat(document.getElementById("nakit-tutar").value) || 0;
+      const kart = parseFloat(document.getElementById("kart-tutar").value) || 0;
+      const toplam = sepet.reduce((a, b) => a + (b.fiyat * b.adet), 0);
+
+      if (nakit + kart < toplam) {
+        alert("Yetersiz ödeme!");
+        return;
+      }
+
+      const tarih = new Date().toLocaleString();
+      satislar.push({
+        tarih,
+        kasa: currentUser.name,
+        odeme: `Nakit: ${nakit} ₺, Kart: ${kart} ₺`,
+        tutar: toplam.toFixed(2),
+        detay: sepet.map(s => `${s.ad} x${s.adet}`).join(", ")
+      });
+
+      localStorage.setItem("pos_satislar_v5", JSON.stringify(satislar));
+      localStorage.setItem("pos_urunler_v5", JSON.stringify(urunler));
+
+      yazdirFis(toplam, nakit, kart);
+
+      sepet = [];
+      sepetGoster();
+      raporuGuncelle();
+      document.getElementById("satis-sonuc").innerHTML = "🎉 Satış tamamlandı!";
+      playSound("success");
+    }
+
+    // Fiş yazdır
+    function yazdirFis(toplam, nakit, kart) {
+      const doc = new jspdf.jsPDF();
+      doc.setFontSize(12);
+      doc.text("EFSANE POS", 20, 20);
+      doc.text("Fiş No: " + Date.now(), 20, 30);
+      doc.text("Tarih: " + new Date().toLocaleString(), 20, 40);
+      doc.text("----------------------------", 20, 50);
+      
+      let y = 60;
+      sepet.forEach(item => {
+        doc.text(`${item.ad} x${item.adet} = ${(item.fiyat * item.adet).toFixed(2)} ₺`, 20, y);
+        y += 10;
+      });
+
+      doc.text("----------------------------", 20, y);
+      y += 10;
+      doc.text(`Toplam: ${toplam.toFixed(2)} ₺`, 20, y);
+      y += 10;
+      doc.text(`Nakit: ${nakit.toFixed(2)} ₺`, 20, y);
+      y += 10;
+      doc.text(`Kart: ${kart.toFixed(2)} ₺`, 20, y);
+      y += 10;
+      doc.text(`Para Üstü: ${Math.max(0, nakit + kart - toplam).toFixed(2)} ₺`, 20, y);
+      y += 20;
+      doc.text("Teşekkür ederiz!", 20, y);
+      doc.save("fis.pdf");
+    }
+
+    // Toptancı ekle
+    function toptanciEkle() {
+      if (!currentUser) return;
+      const ad = document.getElementById("toptanci-ad").value.trim();
+      const telefon = document.getElementById("toptanci-telefon").value;
+      const borc = parseFloat(document.getElementById("toptanci-borc").value) || 0;
+
+      if (!ad) {
+        alert("Toptancı adı gerekli!");
+        return;
+      }
+
+      toptancilar.push({ ad, telefon, borc });
+      localStorage.setItem("pos_toptancilar_v5", JSON.stringify(toptancilar));
+      toptanciTablosuDoldur();
+      raporuGuncelle();
+      playSound("success");
+
+      document.getElementById("toptanci-ad").value = "";
+      document.getElementById("toptanci-telefon").value = "";
+      document.getElementById("toptanci-borc").value = "";
+    }
+
+    function toptanciTablosuDoldur() {
+      const tbody = document.getElementById("toptanci-tablo");
+      tbody.innerHTML = "<tr><th>Ad</th><th>Telefon</th><th>Borç</th><th>İşlem</th></tr>";
+      toptancilar.forEach((t, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${t.ad}</td>
+          <td>${t.telefon}</td>
+          <td>${t.borc.toFixed(2)} ₺</td>
+          <td><button class="delete-btn" onclick="toptanciSil(${i})">Sil</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toptanciSil(index) {
+      if (confirm("Bu toptancıyı silmek istiyor musunuz?")) {
+        toptancilar.splice(index, 1);
+        localStorage.setItem("pos_toptancilar_v5", JSON.stringify(toptancilar));
+        toptanciTablosuDoldur();
+        raporuGuncelle();
+      }
+    }
+
+    // Raporu güncelle
+    function raporuGuncelle() {
+      document.getElementById("toplam-satis").textContent = satislar.length;
+      const ciro = satislar.reduce((a, b) => a + parseFloat(b.tutar), 0);
+      document.getElementById("toplam-ciro").textContent = ciro.toFixed(2) + " ₺";
+      document.getElementById("urun-sayisi").textContent = urunler.length;
+
+      const borc = toptancilar.reduce((a, b) => a + b.borc, 0);
+      document.getElementById("toplam-borc").textContent = borc.toFixed(2) + " ₺";
+
+      const tbody = document.getElementById("rapor-tablo");
+      tbody.innerHTML = "<tr><th>Tarih</th><th>Kasa</th><th>Ödeme</th><th>Tutar</th></tr>";
+      satislar.slice(-100).reverse().forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${s.tarih}</td><td>${s.kasa}</td><td>${s.odeme}</td><td>${s.tutar} ₺</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Kasa kapanışı
+    function kasaKapanisi() {
+      const today = new Date().toDateString();
+      const gunlukSatislar = satislar.filter(s => new Date(s.tarih).toDateString() === today);
+      const toplam = gunlukSatislar.reduce((a, b) => a + parseFloat(b.tutar), 0);
+      const nakit = gunlukSatislar
+        .filter(s => s.odeme.includes("Kart: 0.00"))
+        .reduce((a, b) => a + parseFloat(b.tutar), 0);
+      const kart = toplam - nakit;
+
+      const baslangic = parseFloat(prompt("Sabah kasaya giren miktar (₺):")) || 0;
+      const kasadaVar = parseFloat(prompt("Kasada ölçülen nakit (₺):")) || 0;
+      const beklenen = baslangic + nakit;
+      const fark = kasadaVar - beklenen;
+
+      const rapor = `
+        📅 KASA KAPANIŞ RAPORU\n
+        Tarih: ${new Date().toLocaleDateString()}\n
+        Kullanan: ${currentUser.name}\n\n
+        Toplam Satış: ${gunlukSatislar.length}\n
+        Toplam Ciro: ${toplam.toFixed(2)} ₺\n
+        Nakit: ${nakit.toFixed(2)} ₺\n
+        Kart: ${kart.toFixed(2)} ₺\n\n
+        Başlangıç: ${baslangic.toFixed(2)} ₺\n
+        Beklenen: ${beklenen.toFixed(2)} ₺\n
+        Gerçekleşen: ${kasadaVar.toFixed(2)} ₺\n
+        Fark: ${fark.toFixed(2)} ₺\n\n
+        ${fark >= 0 ? "🎉 Fazla" : "⚠️ Eksik"}
+      `;
+
+      alert(rapor);
+      document.getElementById("kasa-sonuc").textContent = rapor;
+      document.getElementById("kasa-sonuc").style.display = "block";
+    }
+
+    // Yedek al (simülasyon - gerçek Google Drive entegrasyonu için sunucu gerekir)
+    function yedekAl() {
+      alert("☁️ Yedekleme isteği alındı!\nGerçek entegrasyon için sunucu gerekir.\nVeriler tarayıcıda otomatik kaydediliyor.");
+    }
+
+    // Excel'e dışa aktar
+    function dışaAktarExcel() {
+      const data = urunler.map(u => ({
+        Barkod: u.barkod,
+        Ürün: u.ad,
+        Fiyat: u.fiyat + " ₺",
+        Stok: u.stok
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Ürünler");
+      XLSX.writeFile(wb, "urun_listesi.xlsx");
+      playSound("success");
+    }
+
+    // Ses çal
+    function playSound(type) {
+      const sound = document.getElementById(type === "success" ? "success-sound" : "error-sound");
+      sound.currentTime = 0;
+      sound.play();
+    }
+  </script>
+</body>
+</html>
